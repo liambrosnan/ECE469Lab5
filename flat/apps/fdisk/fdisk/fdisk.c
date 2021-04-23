@@ -102,16 +102,18 @@ int FdiskWriteBlock(uint32 blocknum, dfs_block *b) {
     // STUDENT: put your code here
     uint32 writes = sb.blocksize / diskblocksize;
     uint32 disk_blocknum;
-    
-    for(int i=0; i < writes; i++){
+    int i;
+
+    for(i=0; i < writes; i++){
         // Calc Physical Block Number:
-        physical_blocknum = i + (blocknum * writes);
+        physical_blocknum = (blocknum * writes) + i;
         
         if(disk_write_block(physical_blocknum,b) == DISK_FAIL){
-            printf("Error writing physical blocknum");
             return DISK_FAIL;
         }
-        b = b + disk_blocksize;
+        else{
+            *b = *b + diskblocksize;
+        }
     }
     return DISK_SUCCESS;
 }
