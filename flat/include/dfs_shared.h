@@ -23,6 +23,8 @@ typedef struct dfs_block {
 #define DFS_INODE_MAX_FILENAME_LENGTH 72
 #define DFS_INODE_BLOCKTABLE_SIZE 10
 
+
+
 typedef struct dfs_inode {
     // STUDENT: put inode structure internals here
     // IMPORTANT: sizeof(dfs_inode) MUST return 128 in order to fit in enough
