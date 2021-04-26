@@ -478,8 +478,6 @@ int DfsInodeDelete(uint32 handle) {
 
     Printf("Inode Deleted\n");
     return DFS_SUCCESS;
-
-
 }
 
 
@@ -513,7 +511,7 @@ int DfsInodeReadBytes(uint32 handle, void *mem, int start_byte, int num_bytes) {
     readFromFunc = DfsReadBlock(inodes[handle].BTindex,&buffer);
     position = start_byte % sb.blocksize;
     
-    
+
     while(bytesRead < num_bytes){
         if(BN < DFS_INODE_BLOCKTABLE_SIZE){
             dfsBN = inodes[handle].blockTable[BN];
