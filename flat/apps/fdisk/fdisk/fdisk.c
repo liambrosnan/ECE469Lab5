@@ -4,8 +4,8 @@
 #include "fdisk.h"
 
 dfs_superblock sb;
-dfs_inode inodes[DFS_INODE_MAX_NUM];
-uint32 fbv[DFS_FBV_MAX_NUM_WORDS];
+dfs_inode inodes[DFS_INODE_NMAX_NUM];
+uint32 fbv[DFS_MAX_NUM_WORDS];
 
 int diskblocksize = 0; // These are global in order to speed things up
 int disksize = 0;      // (i.e. fewer traps to OS to get the same number)
@@ -18,10 +18,11 @@ void main (int argc, char *argv[])
     // STUDENT: put your code here. Follow the guidelines below. They are just the main steps.
     // You need to think of the finer details. You can use bzero() to zero out bytes in memory
     
-    char dBlock_buf[disk_blocksize()];
-    char * hold;
-    
     //Initializations and argc check
+        
+    char dBlock_buf[disk_blocksize()];
+    char * inodePtr;
+    char * fbvPtr;
     
     if(argc != 1){
         printf("ERR -> No expected inputs");
@@ -46,10 +47,10 @@ void main (int argc, char *argv[])
     
     sb.fbvBlockStart = FDISK_BLOCK_START;
     
-    sb.dataBlockStart = FDISK_BLOCK_START + (((sb.blocks + 31) / 32 * 4) + (sb.blocksize-1)) / sb.blocksize
+    sb.dataBlockStart = ((((sb.blocks + 31) / 32 * 4) + (sb.blocksize-1)) / sb.blocksize) + FDISK_BLOCK_START;
     
     // ----------- ADD print statements for checks/output ------------
-    
+    //Printf()
     
     
     
@@ -63,30 +64,30 @@ void main (int argc, char *argv[])
     
     // Write all inodes as not in use and empty (all zeros)
     int i,j;
-    for(i = 0; i < sb.blocks; i++){
+    for(i = 0; i < sb.num_inodes; i++){
         inodes[i].in_use = 0;
         inodes[i].file_size = 0;
         inodes[i].filename[0] = '\0';
+        inodes[i].BTindex = -1;
+        inodes[i].BTindex2 = -1;
         for(j = 0; j < DFS_INODE_BLOCKTABLE_SIZE; j++){
             inodes[i].blockTable[j] = -1;
         }
-        inodes[i].BTindex = -1;
-        inodes[i].BTindex2 = -1;
     }
-    
+    inodePtr = (char *) inodes;
     for(i = sb.inodeBlockStart; i < sb.fbvBlockStart; i++){
-        FdiskWriteBlock(i,&hold);
+        FdiskWriteBlock(i,&inodePtr);
     }
     // Next, setup free block vector (fbv) and write free block vector to the disk
     
-    fbv[0] = 0xFFFFFF00;
+    fbv[0] = 0xFFFFFFFF;    // LIAM - check value for this
     for(i = 1; i < DFS_MAX_NUM_WORDS; i++){
         fbv[i] = 0;
     }
-    hold = (char *)fbv;
+    fbvPtr = (char *) fbv;
     
     for(i = sb.fbvBlockStart; i < sb.dataBlockStart; i++){
-        FdiskWriteBlock(i,&hold);
+        FdiskWriteBlock(i,&fbvPtr);
     }
     // Finally, setup superblock as valid filesystem and write superblock and boot record to disk:
     
@@ -100,19 +101,21 @@ void main (int argc, char *argv[])
 
 int FdiskWriteBlock(uint32 blocknum, dfs_block *b) {
     // STUDENT: put your code here
-    uint32 writes = sb.blocksize / diskblocksize;
-    uint32 disk_blocknum;
+    uint32 writes;
+    uint32 physBlocknum;
     int i;
+
+    writes = sb.blocksize / diskblocksize;
 
     for(i=0; i < writes; i++){
         // Calc Physical Block Number:
-        physical_blocknum = (blocknum * writes) + i;
+        physBlocknum = (blocknum * writes) + i;
         
-        if(disk_write_block(physical_blocknum,b) == DISK_FAIL){
+        if(disk_write_block(physBlocknum,b) == DISK_FAIL){
             return DISK_FAIL;
         }
         else{
-            *b = *b + diskblocksize;
+            b = b + diskblocksize;      // LIAM - Check Pointers here
         }
     }
     return DISK_SUCCESS;
