@@ -6,7 +6,7 @@
 #include "dfs.h"
 #include "synch.h"
 
-#include "dfs_shared"
+#include "dfs_shared.h"
 
 static dfs_inode inodes[DFS_INODE_NMAX_NUM]; // all inodes
 static dfs_superblock sb; // superblock
