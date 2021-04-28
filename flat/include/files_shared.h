@@ -15,7 +15,7 @@ typedef struct file_descriptor {
   char filename[FILE_MAX_FILENAME_LENGTH];
   int fileEnd;
   int position;
-  int pid;
+  int file_pid;
   char mode;
   int inode;
 } file_descriptor;
