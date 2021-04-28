@@ -6,6 +6,8 @@
 #include "dfs.h"
 #include "synch.h"
 
+#include "dfs_shared"
+
 static dfs_inode inodes[DFS_INODE_NMAX_NUM]; // all inodes
 static dfs_superblock sb; // superblock
 static uint32 fbv[DFS_MAX_NUM_WORDS]; // Free block vector
