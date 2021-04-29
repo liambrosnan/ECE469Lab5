@@ -436,15 +436,13 @@ uint32 DfsInodeOpen(char *filename) {
 
         dstrncpy(inodes[handle].filename,filename,dstrlen(filename));
 
-        while(LockHandleRelease(inodeLock) != SYNC_SUCCESS);
+        while(LockHandleRelease(inodesLock) != SYNC_SUCCESS);
 
         Printf("Inode is Open\n");
         return handle;
     }
     
 }
-
-
 //-----------------------------------------------------------------
 // DfsInodeDelete de-allocates any data blocks used by this inode, 
 // including the indirect addressing block if necessary, then mark 
