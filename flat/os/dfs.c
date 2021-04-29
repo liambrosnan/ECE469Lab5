@@ -434,7 +434,7 @@ uint32 DfsInodeOpen(char *filename) {
         inodes[handle].file_size = 0;
         inodes[handle].in_use = 1;
 
-        dstrncpy(inode[handle].filename,filename,dstrlen(filename));
+        dstrncpy(inodes[handle].filename,filename,dstrlen(filename));
 
         while(LockHandleRelease(inodeLock) != SYNC_SUCCESS);
 
