@@ -27,7 +27,7 @@ uint32 FileOpen(char *filename, char *mode){
     if(inode_name != DFS_FAIL){
         for(i=0; i < DFS_INODE_NMAX_NUM;i++){
             if(files[i].inode == inode_name){
-                successFlag = 1
+                successFlag = 1;
                 handle = i;
             }
         }
