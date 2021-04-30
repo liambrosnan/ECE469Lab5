@@ -745,7 +745,6 @@ uint32 DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
             return DFS_FAIL;
         }
 
-
     }
     return dfsBN;
 }
