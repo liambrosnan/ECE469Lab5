@@ -217,7 +217,7 @@ int DfsCloseFileSystem() {
         // Printf("here\n");
         bcopy(inodesPtr,buffer.data,DISK_BLOCKSIZE);
         if(DiskWriteBlock(i,&buffer) != DISK_BLOCKSIZE){
-            Printf("Write to Inodes failed");
+            Printf("Write to Inodes failed\n");
             return DFS_FAIL;
         }
 
@@ -232,7 +232,7 @@ int DfsCloseFileSystem() {
         bcopy(fbvPtr,buffer.data,DISK_BLOCKSIZE);
         if(DiskWriteBlock(i,&buffer) != DISK_BLOCKSIZE){
             // Printf("here\n");
-            Printf("Write to FBV failed");
+            Printf("Write to FBV failed\n");
             return DFS_FAIL;
         }
         fbvPtr += DISK_BLOCKSIZE;
@@ -251,7 +251,7 @@ int DfsCloseFileSystem() {
         return DFS_FAIL;
     }
 
-    Printf("DFS Closed successfully");
+    Printf("DFS Closed successfully\n");
     return DFS_SUCCESS;
 }
 
@@ -492,7 +492,11 @@ int DfsInodeDelete(uint32 handle) {
 
     inodes[handle].file_size = 0;
     inodes[handle].in_use = 0;
+<<<<<<< HEAD
     // inodes[handle].filename = "test";
+=======
+    // inodes[handle].filename = '\0';
+>>>>>>> fc4c762962e7d3b4c352106c25dd4e12d40a184f
 
     for(i = 0; i < DFS_INODE_BLOCKTABLE_SIZE; i++){
         inodes[handle].blockTable[i] = -1;
@@ -695,7 +699,11 @@ uint32 DfsInodeFilesize(uint32 handle){
         Printf("Filename does not exist\n");
         return DFS_FAIL;
     }
+<<<<<<< HEAD
     return inodes[handle].file_size;
+=======
+    return inodes[handle].file_size
+>>>>>>> fc4c762962e7d3b4c352106c25dd4e12d40a184f
 }
 
 
