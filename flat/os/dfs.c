@@ -749,8 +749,6 @@ uint32 DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
     return dfsBN;
 }
 
-
-
 //-----------------------------------------------------------------
 // DfsInodeTranslateVirtualToFilesys translates the 
 // virtual_blocknum to the corresponding file system block using 
