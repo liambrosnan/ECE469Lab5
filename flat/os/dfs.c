@@ -6,7 +6,7 @@
 #include "dfs.h"
 #include "synch.h"
 
-// #include "dfs_shared.h"
+//#include "dfs_shared.h"
 
 // #define DFS_INODE_NMAX_NUM 128
 // #define DFS_MAX_NUM_WORDS (1024 * 8) / 4
@@ -39,8 +39,6 @@
 //     int BTindex;
 //     int BTindex2;
 // } dfs_inode;
-
-
 
 static dfs_inode inodes[DFS_INODE_NMAX_NUM]; // all inodes
 static dfs_superblock sb; // superblock
@@ -108,10 +106,18 @@ int DfsOpenFileSystem() {
 //Basic steps:
 // Check that filesystem is not already open
 
+    disk_block buffer;
+    char * hold;
+    int i;
+    int bytesRead;
+    int bytesWritten;
+
+    hold = (char*)inodes;
+
     if(DFSisOpen){
         return DFS_FAIL;
-        DFSisOpen = 1;      // flag that its open
     }
+    DFSisOpen = 1;      // flag that its open
 
 // Read superblock from disk.  Note this is using the disk read rather 
 // than the DFS read function because the DFS read requires a valid 
@@ -119,10 +125,9 @@ int DfsOpenFileSystem() {
 // until we read the superblock. Also, we don't know the block size 
 // until we read the superblock, either.
     
-    disk_block buffer;
 
     if(DfsReadBlock(1,&buffer) != DISK_BLOCKSIZE){
-        Printf("Error in DfsReadBlock\n");
+        printf("Error in DfsReadBlock\n");
         return DFS_FAIL;
     }
 
@@ -135,16 +140,12 @@ int DfsOpenFileSystem() {
 // Read free block vector
 // Change superblock to be invalid, write back to disk, then change 
 // it back to be valid in memory
-    char * hold;
-    int i;
-    hold = (char *) inodes;
-    int bytesRead;
     
     for(i = dfsBNUM(sb.inodeBlockStart); i < dfsBNUM(sb.fbvBlockStart); i++){
         // bytesRead = DfsReadBlock(1,&buffer);
         bytesRead = DiskReadBlock(1,&buffer);      // DISK, not DFS ReadBlock
         if(bytesRead != DISK_BLOCKSIZE){
-            Printf("Error in DfsReadBlock\n");
+            printf("Error in DfsReadBlock\n");
             return DFS_FAIL;
         }
 
@@ -159,7 +160,7 @@ int DfsOpenFileSystem() {
         // bytesRead = DfsReadBlock(1,&buffer);
         bytesRead = DiskReadBlock(1,&buffer);       
         if(bytesRead != DISK_BLOCKSIZE){
-            Printf("Error in DfsReadBlock\n");
+            printf("Error in DfsReadBlock\n");
             return DFS_FAIL;
         }
 
@@ -171,17 +172,16 @@ int DfsOpenFileSystem() {
     bzero(buffer.data,DISK_BLOCKSIZE);
     bcopy((char *)(&sb),buffer.data,sizeof(dfs_superblock));
 
-    int bytesWritten;
     bytesWritten = DiskWriteBlock(1,&buffer);
 
     if(bytesWritten != DISK_BLOCKSIZE){
-        Printf("Error in DfsReadBlock\n");
+        printf("Error in DfsReadBlock\n");
         return DFS_FAIL;
     }
 
 
 
-    Printf("DFSOpenFileSystem worked\n");
+    printf("DFSOpenFileSystem worked\n");
     sb.valid = 1;
     return DFS_SUCCESS;
 }
@@ -201,9 +201,11 @@ int DfsCloseFileSystem() {
     uint32 inodeStart;
     uint32 fbvStart;
     uint32 dataStart;
+    int bytesWritten;
+
 
     if(DFSisOpen == 0){
-        Printf("Already Closed\n");
+        printf("Already Closed\n");
         return DFS_SUCCESS;
     }
 
@@ -217,7 +219,7 @@ int DfsCloseFileSystem() {
         // Printf("here\n");
         bcopy(inodesPtr,buffer.data,DISK_BLOCKSIZE);
         if(DiskWriteBlock(i,&buffer) != DISK_BLOCKSIZE){
-            Printf("Write to Inodes failed\n");
+            printf("Write to Inodes failed\n");
             return DFS_FAIL;
         }
 
@@ -232,7 +234,7 @@ int DfsCloseFileSystem() {
         bcopy(fbvPtr,buffer.data,DISK_BLOCKSIZE);
         if(DiskWriteBlock(i,&buffer) != DISK_BLOCKSIZE){
             // Printf("here\n");
-            Printf("Write to FBV failed\n");
+            printf("Write to FBV failed\n");
             return DFS_FAIL;
         }
         fbvPtr += DISK_BLOCKSIZE;
@@ -243,15 +245,14 @@ int DfsCloseFileSystem() {
     bzero(buffer.data,DISK_BLOCKSIZE);
     bcopy((char *)(&sb),buffer.data,sizeof(dfs_superblock));
     
-    int bytesWritten;
     bytesWritten = DiskWriteBlock(1,&buffer);
 
     if(bytesWritten != DISK_BLOCKSIZE){
-        Printf("Error in DfsReadBlock\n");
+        printf("Error in DfsReadBlock\n");
         return DFS_FAIL;
     }
 
-    Printf("DFS Closed successfully\n");
+    printf("DFS Closed successfully\n");
     return DFS_SUCCESS;
 }
 
@@ -270,16 +271,17 @@ uint32 DfsAllocateBlock() {
     int packet;
     int position;
     int returnHandle;
+    int foundPacket = 0;
+
 
     if(sb.valid != 1){
-        Printf("Filesystem not validly loaded (DfsAllocateBlock)\n");
+        printf("Filesystem not validly loaded (DfsAllocateBlock)\n");
         return DFS_FAIL;
     }
 
     while(LockHandleAcquire(fbvLock) != SYNC_SUCCESS);
 
     // Find Packet
-    int foundPacket = 0;
     for(i = 0;(i <= DFS_MAX_NUM_WORDS) || (foundPacket == 0);i++){
         packet = i;
         for(j = 0; j <= 31; j++){
@@ -302,22 +304,24 @@ uint32 DfsAllocateBlock() {
 // DfsFreeBlock deallocates a DFS block.
 //-----------------------------------------------------------------
 
-int DfsFreeBlock(uint32 blocknum) {    
+int DfsFreeBlock(uint32 blocknum) {   
+    int packet = blocknum >> 5;         // adjust for sizing
+    int position = blocknum & 0x1F;     // bitwise calc
+
     if(DFSisOpen != 1){
-        Printf("Filesystem not open (FreeBlock)\n");
+        printf("Filesystem not open (FreeBlock)\n");
         return DFS_FAIL;
     }
 
     while(LockHandleAcquire(fbvLock) != SYNC_SUCCESS); 
 
-    int packet = blocknum >> 5;         // adjust for sizing
-    int position = blocknum & 0x1F;     // bitwise calc
+
 
     fbv[packet] &= invert(1<<(31 - position));
     
     while(LockHandleRelease(fbvLock) != SYNC_SUCCESS);  
     
-    Printf("Block Successfully Freed\n");
+    printf("Block Successfully Freed\n");
     return DFS_SUCCESS;
 }
 
@@ -381,6 +385,7 @@ int DfsWriteBlock(uint32 blocknum, dfs_block *b){
     // check if allocated
     int packet = blocknum >> 5;         // adjust for sizing
     int position = blocknum & 0x1F;     // bitwise calc
+
     if((fbv[packet] & (0x80000000 >> position)) == 0){
         // Printf("not allocated\n");
         return DFS_FAIL;
@@ -417,7 +422,7 @@ uint32 DfsInodeFilenameExists(char *filename) {
     int i;
 
     if(DFSisOpen != 1){
-        Printf("Filesystem not open (FreeBlock)\n");
+        printf("Filesystem not open (FreeBlock)\n");
         return DFS_FAIL;
     }
 
@@ -430,7 +435,7 @@ uint32 DfsInodeFilenameExists(char *filename) {
     }
 
     // no inodes found in use
-    Printf("No Inodes Found in use\n");
+    printf("No Inodes Found in use\n");
     return DFS_FAIL;
 }
 
@@ -472,7 +477,7 @@ uint32 DfsInodeOpen(char *filename) {
 
         while(LockHandleRelease(inodesLock) != SYNC_SUCCESS);
 
-        Printf("Inode is Open\n");
+        printf("Inode is Open\n");
         return handle;
     }
     
@@ -509,7 +514,7 @@ int DfsInodeDelete(uint32 handle) {
 
     while(LockHandleRelease(inodesLock) != SYNC_SUCCESS);
 
-    Printf("Inode Deleted\n");
+    printf("Inode Deleted\n");
     return DFS_SUCCESS;
 }
 
@@ -522,7 +527,7 @@ int DfsInodeDelete(uint32 handle) {
 //-----------------------------------------------------------------
 
 int DfsInodeReadBytes(uint32 handle, void *mem, int start_byte, int num_bytes) {
-    dfs_block buffer;
+    disk_block buffer;
     int * bufPtr;
     int * memPtr;
     int bytesRead;
@@ -534,7 +539,7 @@ int DfsInodeReadBytes(uint32 handle, void *mem, int start_byte, int num_bytes) {
 
     
     if(inodes[handle].in_use != 1){
-        Printf("Filename does not exist\n");
+        printf("Filename does not exist\n");
         return DFS_FAIL;
     }
 
@@ -560,7 +565,7 @@ int DfsInodeReadBytes(uint32 handle, void *mem, int start_byte, int num_bytes) {
             dfsBN = bufPtr[BN - DFS_INODE_BLOCKTABLE_SIZE];
         }
         if(DfsReadBlock(dfsBN,&buffer) != sb.blocksize){
-            Printf("DFS Read failed (DfsInodeReadBytes)\n");
+            printf("DFS Read failed (DfsInodeReadBytes)\n");
             return DFS_FAIL;
         }
 
@@ -580,7 +585,7 @@ int DfsInodeReadBytes(uint32 handle, void *mem, int start_byte, int num_bytes) {
         else{
             bcopy(buffer.data + position,memPtr,bytesOffset);
             bytesRead += posOffset;
-            Printf("Bytes read from inode correctly\n");
+            printf("Bytes read from inode correctly\n");
             return  bytesRead;
         }
     }
@@ -597,7 +602,7 @@ int DfsInodeReadBytes(uint32 handle, void *mem, int start_byte, int num_bytes) {
 //-----------------------------------------------------------------
 
 int DfsInodeWriteBytes(uint32 handle, void *mem, int start_byte, int num_bytes) {
-    dfs_block buffer;
+    disk_block buffer;
     int * bufPtr;
     char * memPtr;
     int bytesWritten;
@@ -609,7 +614,7 @@ int DfsInodeWriteBytes(uint32 handle, void *mem, int start_byte, int num_bytes) 
     int posOffset, bytesOffset;
 
     if(inodes[handle].in_use != 1){
-        Printf("Filename does not exist\n");
+        printf("Filename does not exist\n");
         return DFS_FAIL;
     }
 
@@ -629,10 +634,11 @@ int DfsInodeWriteBytes(uint32 handle, void *mem, int start_byte, int num_bytes) 
             if(dfsBN == -1){
                 dfsBN = DfsInodeAllocateVirtualBlock(handle,BN);
                 if(dfsBN == DFS_FAIL){
-                    Printf("Not allocated (DfsInodeWriteBytes) 1\n");
+                    printf("Not allocated (DfsInodeWriteBytes) 1\n");
                     return DFS_FAIL;
                 }
             }
+        }
         else{
             if(memPtr == NULL){
                 if(inodes[handle].BTindex == -1){
@@ -649,7 +655,7 @@ int DfsInodeWriteBytes(uint32 handle, void *mem, int start_byte, int num_bytes) 
             if(dfsBN == -1){
                 dfsBN = DfsInodeAllocateVirtualBlock(handle,BN);
                 if(dfsBN == DFS_FAIL){
-                    Printf("Not allocated (DfsInodeWriteBytes) 2\n");
+                    printf("Not allocated (DfsInodeWriteBytes) 2\n");
                     return DFS_FAIL;
                 }
             }
@@ -657,7 +663,7 @@ int DfsInodeWriteBytes(uint32 handle, void *mem, int start_byte, int num_bytes) 
         if(bytesOffset > posOffset){
             bcopy(memPtr,buffer.data + position,posOffset);
             if(DfsWriteBlock(dfsBN,&buffer) != sb.blocksize){
-                Printf("Not written (DfsInodeWriteBytes)1\n");
+                printf("Not written (DfsInodeWriteBytes)1\n");
                 return DFS_FAIL;
             }
             position = 0;
@@ -668,20 +674,20 @@ int DfsInodeWriteBytes(uint32 handle, void *mem, int start_byte, int num_bytes) 
         else{
             bcopy(memPtr,buffer.data + position,posOffset);
             if(DfsWriteBlock(dfsBN,&buffer) != sb.blocksize){
-                Printf("Not written (DfsInodeWriteBytes) 2\n");
+                printf("Not written (DfsInodeWriteBytes) 2\n");
                 return DFS_FAIL;
             }
             bytesWritten += bytesOffset;
             if(start_byte + num_bytes > inodes[handle].file_size){
                 inodes[handle].file_size = start_byte +num_bytes;
             }
-            Printf("Bytes written from inode correctly\n");
+            printf("Bytes written from inode correctly\n");
             return bytesWritten;
         }
     }
     return DFS_FAIL;
 }
-}
+
 
 
 //-----------------------------------------------------------------
@@ -692,7 +698,7 @@ int DfsInodeWriteBytes(uint32 handle, void *mem, int start_byte, int num_bytes) 
 
 uint32 DfsInodeFilesize(uint32 handle){
     if(inodes[handle].in_use != 1){
-        Printf("Filename does not exist\n");
+        printf("Filename does not exist\n");
         return DFS_FAIL;
     }
     return inodes[handle].file_size;
@@ -710,12 +716,12 @@ uint32 DfsInodeFilesize(uint32 handle){
 //-----------------------------------------------------------------
 
 uint32 DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
-    dfs_block buffer;
+    disk_block buffer;
     int * bufPtr;
     int dfsBN;
 
     if(inodes[handle].in_use != 1){
-        Printf("Filename does not exist\n");
+        printf("Filename does not exist\n");
         return DFS_FAIL;
     }
     
@@ -756,12 +762,18 @@ uint32 DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
 //-----------------------------------------------------------------
 
 uint32 DfsInodeTranslateVirtualToFilesys(uint32 handle, uint32 virtual_blocknum) {
-    dfs_block buffer;
+    disk_block buffer;
     int * bufPtr;
     int dfsBN;
 
+    dfsBN = 0;
+    // printf("here\n");
+    if(sb.valid != 1 || DFSisOpen != 1){
+        return DFS_FAIL;
+    }
+
     if(inodes[handle].in_use != 1){
-        Printf("Filename does not exist\n");
+        printf("Filename does not exist\n");
         return DFS_FAIL;
     }
     
@@ -769,6 +781,7 @@ uint32 DfsInodeTranslateVirtualToFilesys(uint32 handle, uint32 virtual_blocknum)
         if(inodes[handle].blockTable[virtual_blocknum] != -1){
             return DFS_FAIL;
         }
+        dfsBN = inodes[handle].blockTable[virtual_blocknum];
     }
     else{
         if(inodes[handle].BTindex == -1){
@@ -777,8 +790,8 @@ uint32 DfsInodeTranslateVirtualToFilesys(uint32 handle, uint32 virtual_blocknum)
         if(DfsReadBlock(inodes[handle].BTindex,&buffer) != sb.blocksize){
             return DFS_FAIL;
         }
-        bufPtr = (int*) buffer.data;
-        dfsBN = bufPtr[virtual_blocknum - DFS_INODE_BLOCKTABLE_SIZE];
+        bufPtr = (int*)buffer.data;
+        dfsBN = bufPtr[virtual_blocknum - 10];
     }
     return dfsBN;
 }
@@ -792,3 +805,4 @@ uint32 dfsBNUM(uint32 n){
     uint32 back = n * dfsRatio();
     return back;
 }
+

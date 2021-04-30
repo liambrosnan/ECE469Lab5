@@ -13,6 +13,9 @@ void RunOSTests() {
   char write[4] = "test";
   char read_buffer[4];
 
+  int i;
+
+
   // STUDENT: run any os-level tests here
 
 // Open Inode
@@ -42,7 +45,7 @@ void RunOSTests() {
   DfsInodeReadBytes(handle,&read_buffer,20,4);
 
   printf("Read from file: (expecting 'test'\n");
-  int i;
+
   for(i = 0; i < 4;i++){
     printf("%c",read_buffer[i]);
   }
