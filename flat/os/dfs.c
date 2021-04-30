@@ -638,8 +638,8 @@ int DfsInodeWriteBytes(uint32 handle, void *mem, int start_byte, int num_bytes) 
                 return DFS_FAIL;
             }
             bytesWritten += bytesOffset;
-            if(start_byte + num_bytes > inodes[handle].filesize){
-                inodes[handle].filesize = start_byte +num_bytes;
+            if(start_byte + num_bytes > inodes[handle].file_size){
+                inodes[handle].file_size = start_byte +num_bytes;
             }
             Printf("Bytes written from inode correctly\n");
             return bytesWritten;
