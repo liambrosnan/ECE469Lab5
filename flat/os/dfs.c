@@ -107,6 +107,7 @@ int DfsOpenFileSystem() {
 // Check that filesystem is not already open
 
     disk_block buffer;
+    //dfs_block dfs_buffer;
     char * hold;
     int i;
     int bytesRead;
@@ -126,7 +127,7 @@ int DfsOpenFileSystem() {
 // until we read the superblock, either.
     
 
-    if(DfsReadBlock(1,&buffer) != DISK_BLOCKSIZE){
+    if(DiskReadBlock(1,&buffer) != DISK_BLOCKSIZE){
         printf("Error in DfsReadBlock\n");
         return DFS_FAIL;
     }
@@ -297,6 +298,7 @@ uint32 DfsAllocateBlock() {
     while(LockHandleRelease(fbvLock) != SYNC_SUCCESS);
 
     returnHandle = position + (32 * packet);
+    return returnHandle;
 }
 
 
@@ -527,7 +529,7 @@ int DfsInodeDelete(uint32 handle) {
 //-----------------------------------------------------------------
 
 int DfsInodeReadBytes(uint32 handle, void *mem, int start_byte, int num_bytes) {
-    disk_block buffer;
+    dfs_block buffer;
     int * bufPtr;
     int * memPtr;
     int bytesRead;
@@ -602,7 +604,7 @@ int DfsInodeReadBytes(uint32 handle, void *mem, int start_byte, int num_bytes) {
 //-----------------------------------------------------------------
 
 int DfsInodeWriteBytes(uint32 handle, void *mem, int start_byte, int num_bytes) {
-    disk_block buffer;
+    dfs_block buffer;
     int * bufPtr;
     char * memPtr;
     int bytesWritten;
@@ -716,7 +718,7 @@ uint32 DfsInodeFilesize(uint32 handle){
 //-----------------------------------------------------------------
 
 uint32 DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
-    disk_block buffer;
+    dfs_block buffer;
     int * bufPtr;
     int dfsBN;
 
@@ -762,7 +764,7 @@ uint32 DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
 //-----------------------------------------------------------------
 
 uint32 DfsInodeTranslateVirtualToFilesys(uint32 handle, uint32 virtual_blocknum) {
-    disk_block buffer;
+    dfs_block buffer;
     int * bufPtr;
     int dfsBN;
 
